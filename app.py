@@ -22,9 +22,35 @@ def save_file(file):
             filename = str(round(time.time() * 1000)) + str(random.randint(1, 10000))
             file.save(INPUT_DIRECTORY + filename + format)
         except Exception as e:
-            return False,str(e)
+            return False, str(e)
         return True, filename
     return False, ''
+
+
+@app.route("/repeat/<int:n>", methods=['POST'])
+def repeat(n):
+    try:
+        file = request.files['file']
+        format = get_format(file)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if n > MAX_REPEATS:
+        return abort(400, 'Too many repeats,limit ' + str(MAX_REPEATS))
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                tr.repeat(n)
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+        return abort(500, 'File can\'t be save')
+    return abort(400, 'Format not available, available formats: ' + str(VALID_FORMATS))
 
 
 @app.route("/convert/<string:new_format>", methods=['POST'])
