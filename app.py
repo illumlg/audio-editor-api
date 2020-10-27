@@ -26,6 +26,32 @@ def save_file(file):
         return True, filename
     return False, ''
 
+@app.route("/flanger/<string:effect>", methods=['POST'])
+def flanger(effect):
+    try:
+        file = request.files['file']
+        format = get_format(file)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                if effect == 'low': tr.flanger()
+                elif effect == 'medium': tr.flanger(5,4,speed=2,shape='triangle')
+                elif effect == 'high': tr.flanger(20,8,speed=5,shape='triangle')
+                else: return abort(400, 'Choose one of them: low, medium, high')
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+        return abort(500, 'File can\'t be save')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
 @app.route("/tremolo", methods=['POST'], defaults={'speed':6,'depth':50})
 @app.route("/tremolo/<int:speed>/<int:depth>", methods=['POST'])
 def tremolo(speed,depth):
