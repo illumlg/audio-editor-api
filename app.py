@@ -26,6 +26,32 @@ def save_file(file):
         return True, filename
     return False, ''
 
+@app.route("/volume/<string:new_volume>", methods=['POST'])
+def volume(new_volume):
+    try:
+        file = request.files['file']
+        format = get_format(file)
+        new_volume = int(new_volume)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if not MIN_VOLUME <= new_volume <= MAX_VOLUME:
+        return abort(400, 'Change volume, '
+                          'max value = {}, min value = {} '.format(MAX_VOLUME, MIN_VOLUME))
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                tr.vol(new_volume,'db')
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+        return abort(500, 'File can\'t be save')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
 @app.route("/speed/<float:new_speed>", methods=['POST'])
 def speed(new_speed):
