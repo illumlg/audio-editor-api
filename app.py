@@ -28,6 +28,33 @@ def save_file(file):
         return True, filename
     return False, ''
 
+
+@app.route("/treble/<int:gain>", methods=['POST'])
+def treble(gain):
+    try:
+        file = request.files['file']
+        format = get_format(file)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if gain > 20 or gain < -20:
+        return abort(400, 'Wrong gain value, valid values are from -20 to +20 ')
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                tr.treble(gain_db=gain)
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+        return abort(500, 'File can\'t be saved')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
+
 @app.route("/concatenate", methods=['POST'])
 def concatenate():
     dict_files = dict(request.files)
