@@ -1,5 +1,5 @@
 import time, random, sox, re, os
-from flask import Flask, send_from_directory, abort
+from flask import Flask, send_from_directory, abort, g, after_this_request, send_file
 from flask import request
 from config import *
 
@@ -22,11 +22,23 @@ def save_file(file):
     if is_valid_format(format):
         try:
             filename = generate_filename()
+            g.path_to_files.append(INPUT_DIRECTORY + filename + format)
+            g.path_to_files.append(OUTPUT_DIRECTORY + filename + format)
             file.save(INPUT_DIRECTORY + filename + format)
         except Exception as e:
             return False, str(e)
         return True, filename
     return False, ''
+
+@app.before_request
+def before_request():
+    g.path_to_files = []
+
+@app.teardown_request
+def clear(error=None):
+    for path_to_file in g.path_to_files:
+        if os.path.exists(path_to_file):
+            os.remove(path_to_file)
 
 @app.route("/reverse", methods=['POST'])
 def reverse():
@@ -47,7 +59,9 @@ def reverse():
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -66,8 +80,11 @@ def concatenate():
     try:
         tr = sox.Combiner()
         output_filename = generate_filename()
+        g.path_to_files.append(OUTPUT_DIRECTORY + output_filename + '.ogg')
         tr.build(path_to_files,OUTPUT_DIRECTORY + output_filename + '.ogg', 'concatenate')
-        return send_from_directory(OUTPUT_DIRECTORY, output_filename + '.ogg')
+        with open(OUTPUT_DIRECTORY + output_filename + '.ogg', 'rb') as file:
+            bytes = file.read()
+        return app.make_response(bytes)
     except Exception as e:
         print(e)
         return abort(500, e)
@@ -87,8 +104,11 @@ def mix():
     try:
         tr = sox.Combiner()
         output_filename = generate_filename()
+        g.path_to_files.append(OUTPUT_DIRECTORY + output_filename + '.ogg')
         tr.build(path_to_files,OUTPUT_DIRECTORY + output_filename + '.ogg', 'mix')
-        return send_from_directory(OUTPUT_DIRECTORY, output_filename + '.ogg')
+        with open(OUTPUT_DIRECTORY + output_filename + '.ogg', 'rb') as file:
+            bytes = file.read()
+        return app.make_response(bytes)
     except Exception as e:
         print(e)
         return abort(500, e)
@@ -112,7 +132,9 @@ def attenuation_effect(fade_start,fade_end):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -138,7 +160,9 @@ def flanger(effect):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -162,7 +186,9 @@ def tremolo(speed,depth):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -189,7 +215,9 @@ def volume(new_volume):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -222,7 +250,9 @@ def chorus(number_of_voices):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be saved')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -249,7 +279,9 @@ def speed(new_speed):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -275,7 +307,9 @@ def repeat(n):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Format not available, available formats: ' + str(VALID_FORMATS))
 
@@ -292,12 +326,15 @@ def convert(new_format):
         is_success, filename = save_file(file)
         if is_success:
             try:
+                g.path_to_files.append(OUTPUT_DIRECTORY + filename + new_format)
                 sox.Transformer().build_file(INPUT_DIRECTORY + filename + format,
                                              OUTPUT_DIRECTORY + filename + new_format)
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + new_format)
+            with open(OUTPUT_DIRECTORY + filename + new_format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
