@@ -27,6 +27,14 @@ def save_file(file):
     return False, ''
 
 
+def get_info(file):
+    return {'channels': sox.file_info.channels(file),
+            'sample_rate': sox.file_info.sample_rate(file),
+            'encoding': sox.file_info.encoding(file),
+            'duration': sox.file_info.duration(file),
+            'size': os.stat(file).st_size}
+
+
 @app.route("/speed/<float:new_speed>", methods=['POST'])
 def speed(new_speed):
     try:
@@ -37,7 +45,7 @@ def speed(new_speed):
         return abort(400, e)
     if not MIN_SPEED <= new_speed <= MAX_SPEED:
         return abort(400, 'Change speed, '
-                          'max value = {}, min value = {} '.format(MAX_SPEED,MIN_SPEED))
+                          'max value = {}, min value = {} '.format(MAX_SPEED, MIN_SPEED))
     if is_valid_format(format):
         is_success, filename = save_file(file)
         if is_success:
@@ -52,6 +60,7 @@ def speed(new_speed):
             return send_from_directory(OUTPUT_DIRECTORY, filename + format)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
 
 @app.route("/repeat/<int:n>", methods=['POST'])
 def repeat(n):
