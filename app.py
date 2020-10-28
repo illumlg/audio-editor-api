@@ -26,6 +26,113 @@ def save_file(file):
         return True, filename
     return False, ''
 
+@app.route("/attenuation_effect/<float:fade_start>/<float:fade_end>", methods=['POST'])
+def attenuation_effect(fade_start,fade_end):
+    try:
+        file = request.files['file']
+        format = get_format(file)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                tr.fade(fade_start,fade_end)
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+        return abort(500, 'File can\'t be save')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
+@app.route("/flanger/<string:effect>", methods=['POST'])
+def flanger(effect):
+    try:
+        file = request.files['file']
+        format = get_format(file)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                if effect == 'low': tr.flanger()
+                elif effect == 'medium': tr.flanger(5,4,speed=2,shape='triangle')
+                elif effect == 'high': tr.flanger(20,8,speed=5,shape='triangle')
+                else: return abort(400, 'Choose one of them: low, medium, high')
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+        return abort(500, 'File can\'t be save')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
+@app.route("/tremolo", methods=['POST'], defaults={'speed':6,'depth':50})
+@app.route("/tremolo/<int:speed>/<int:depth>", methods=['POST'])
+def tremolo(speed,depth):
+    try:
+        file = request.files['file']
+        format = get_format(file)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                tr.tremolo(speed,depth)
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+        return abort(500, 'File can\'t be save')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
+@app.route("/volume/<string:new_volume>", methods=['POST'])
+def volume(new_volume):
+    try:
+        file = request.files['file']
+        format = get_format(file)
+        new_volume = int(new_volume)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if not MIN_VOLUME <= new_volume <= MAX_VOLUME:
+        return abort(400, 'Change volume, '
+                          'max value = {}, min value = {} '.format(MAX_VOLUME, MIN_VOLUME))
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                tr.vol(new_volume,'db')
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+        return abort(500, 'File can\'t be save')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
+def get_info(file):
+    return {'channels': sox.file_info.channels(file),
+            'sample_rate': sox.file_info.sample_rate(file),
+            'encoding': sox.file_info.encoding(file),
+            'duration': sox.file_info.duration(file),
+            'size': os.stat(file).st_size}
+
 
 @app.route("/chorus/<int:number_of_voices>", methods=['POST'])
 def chorus(number_of_voices):
@@ -63,7 +170,7 @@ def speed(new_speed):
         return abort(400, e)
     if not MIN_SPEED <= new_speed <= MAX_SPEED:
         return abort(400, 'Change speed, '
-                          'max value = {}, min value = {} '.format(MAX_SPEED,MIN_SPEED))
+                          'max value = {}, min value = {} '.format(MAX_SPEED, MIN_SPEED))
     if is_valid_format(format):
         is_success, filename = save_file(file)
         if is_success:
@@ -78,6 +185,7 @@ def speed(new_speed):
             return send_from_directory(OUTPUT_DIRECTORY, filename + format)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
 
 @app.route("/repeat/<int:n>", methods=['POST'])
 def repeat(n):
