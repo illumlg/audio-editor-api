@@ -14,17 +14,40 @@ def get_format(file):
 def is_valid_format(format):
     return format.lower() in VALID_FORMATS
 
+def generate_filename():
+    return str(round(time.time() * 1000)) + str(random.randint(1, 10000))
 
 def save_file(file):
     format = get_format(file)
     if is_valid_format(format):
         try:
-            filename = str(round(time.time() * 1000)) + str(random.randint(1, 10000))
+            filename = generate_filename()
             file.save(INPUT_DIRECTORY + filename + format)
         except Exception as e:
             return False, str(e)
         return True, filename
     return False, ''
+
+@app.route("/mix", methods=['POST'])
+def mix():
+    dict_files = dict(request.files)
+    path_to_files = []
+    for item in dict_files:
+        if not is_valid_format(get_format(dict_files[item])):
+            return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+        is_success, filename = save_file(dict_files[item])
+        print(filename)
+        path_to_files.append(INPUT_DIRECTORY + filename + get_format(dict_files[item]))
+        if not is_success:
+            return abort(500, 'File can\'t be save')
+    try:
+        tr = sox.Combiner()
+        output_filename = generate_filename()
+        tr.build(path_to_files,OUTPUT_DIRECTORY + output_filename + '.ogg', 'mix')
+        return send_from_directory(OUTPUT_DIRECTORY, output_filename + '.ogg')
+    except Exception as e:
+        print(e)
+        return abort(500, e)
 
 @app.route("/attenuation_effect/<float:fade_start>/<float:fade_end>", methods=['POST'])
 def attenuation_effect(fade_start,fade_end):
