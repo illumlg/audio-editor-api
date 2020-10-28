@@ -28,6 +28,27 @@ def save_file(file):
         return True, filename
     return False, ''
 
+@app.route("/concatenate", methods=['POST'])
+def concatenate():
+    dict_files = dict(request.files)
+    path_to_files = []
+    for item in dict_files:
+        if not is_valid_format(get_format(dict_files[item])):
+            return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+        is_success, filename = save_file(dict_files[item])
+        print(filename)
+        path_to_files.append(INPUT_DIRECTORY + filename + get_format(dict_files[item]))
+        if not is_success:
+            return abort(500, 'File can\'t be saved')
+    try:
+        tr = sox.Combiner()
+        output_filename = generate_filename()
+        tr.build(path_to_files,OUTPUT_DIRECTORY + output_filename + '.ogg', 'concatenate')
+        return send_from_directory(OUTPUT_DIRECTORY, output_filename + '.ogg')
+    except Exception as e:
+        print(e)
+        return abort(500, e)
+
 @app.route("/mix", methods=['POST'])
 def mix():
     dict_files = dict(request.files)
