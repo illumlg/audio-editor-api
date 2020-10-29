@@ -68,7 +68,9 @@ def trim(start_time, end_time):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be saved')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -94,7 +96,9 @@ def treble(gain):
             except Exception as e:
                 print(e)
                 return abort(500, e)
-            return send_from_directory(OUTPUT_DIRECTORY, filename + format)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
         return abort(500, 'File can\'t be saved')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
@@ -287,12 +291,25 @@ def volume(new_volume):
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
 
-def get_info(file):
-    return {'channels': sox.file_info.channels(file),
-            'sample_rate': sox.file_info.sample_rate(file),
-            'encoding': sox.file_info.encoding(file),
-            'duration': sox.file_info.duration(file),
-            'size': os.stat(file).st_size}
+@app.route("/info", methods=['POST'])
+def get_info():
+    try:
+        file = request.files['file']
+        format = get_format(file)
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            filename = INPUT_DIRECTORY + filename + format
+            return {'channels': sox.file_info.channels(filename),
+                    'sample_rate': sox.file_info.sample_rate(filename),
+                    'encoding': sox.file_info.encoding(filename),
+                    'duration': sox.file_info.duration(filename),
+                    'size': os.stat(filename).st_size}
+        return abort(500, 'File can\'t be saved')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
 
 @app.route("/chorus/<int:number_of_voices>", methods=['POST'])
