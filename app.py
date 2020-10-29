@@ -1,6 +1,8 @@
 import time, random, sox, re, os
 from flask import Flask, send_from_directory, abort, g, after_this_request, send_file
 from flask import request
+from sox.core import is_number
+
 from config import *
 
 app = Flask(__name__)
@@ -14,8 +16,10 @@ def get_format(file):
 def is_valid_format(format):
     return format.lower() in VALID_FORMATS
 
+
 def generate_filename():
     return str(round(time.time() * 1000)) + str(random.randint(1, 10000))
+
 
 def save_file(file):
     format = get_format(file)
@@ -30,15 +34,18 @@ def save_file(file):
         return True, filename
     return False, ''
 
+
 @app.before_request
 def before_request():
     g.path_to_files = []
+
 
 @app.teardown_request
 def clear(error=None):
     for path_to_file in g.path_to_files:
         if os.path.exists(path_to_file):
             os.remove(path_to_file)
+
 
 @app.route("/trim/<int:start_time>/<int:end_time>", methods=['POST'])
 def trim(start_time, end_time):
@@ -91,6 +98,7 @@ def treble(gain):
         return abort(500, 'File can\'t be saved')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
+
 @app.route("/reverse", methods=['POST'])
 def reverse():
     try:
@@ -133,7 +141,7 @@ def concatenate():
         tr = sox.Combiner()
         output_filename = generate_filename()
         g.path_to_files.append(OUTPUT_DIRECTORY + output_filename + '.ogg')
-        tr.build(path_to_files,OUTPUT_DIRECTORY + output_filename + '.ogg', 'concatenate')
+        tr.build(path_to_files, OUTPUT_DIRECTORY + output_filename + '.ogg', 'concatenate')
         with open(OUTPUT_DIRECTORY + output_filename + '.ogg', 'rb') as file:
             bytes = file.read()
         return app.make_response(bytes)
@@ -158,7 +166,7 @@ def mix():
         tr = sox.Combiner()
         output_filename = generate_filename()
         g.path_to_files.append(OUTPUT_DIRECTORY + output_filename + '.ogg')
-        tr.build(path_to_files,OUTPUT_DIRECTORY + output_filename + '.ogg', 'mix')
+        tr.build(path_to_files, OUTPUT_DIRECTORY + output_filename + '.ogg', 'mix')
         with open(OUTPUT_DIRECTORY + output_filename + '.ogg', 'rb') as file:
             bytes = file.read()
         return app.make_response(bytes)
@@ -166,8 +174,9 @@ def mix():
         print(e)
         return abort(500, e)
 
+
 @app.route("/attenuation_effect/<float:fade_start>/<float:fade_end>", methods=['POST'])
-def attenuation_effect(fade_start,fade_end):
+def attenuation_effect(fade_start, fade_end):
     try:
         file = request.files['file']
         format = get_format(file)
@@ -179,7 +188,7 @@ def attenuation_effect(fade_start,fade_end):
         if is_success:
             try:
                 tr = sox.Transformer()
-                tr.fade(fade_start,fade_end)
+                tr.fade(fade_start, fade_end)
                 tr.build_file(INPUT_DIRECTORY + filename + format,
                               OUTPUT_DIRECTORY + filename + format)
             except Exception as e:
@@ -190,6 +199,7 @@ def attenuation_effect(fade_start,fade_end):
             return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
 
 @app.route("/flanger/<string:effect>", methods=['POST'])
 def flanger(effect):
@@ -219,9 +229,10 @@ def flanger(effect):
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
-@app.route("/tremolo", methods=['POST'], defaults={'speed':6,'depth':50})
+
+@app.route("/tremolo", methods=['POST'], defaults={'speed': 6, 'depth': 50})
 @app.route("/tremolo/<int:speed>/<int:depth>", methods=['POST'])
-def tremolo(speed,depth):
+def tremolo(speed, depth):
     try:
         file = request.files['file']
         format = get_format(file)
@@ -233,7 +244,7 @@ def tremolo(speed,depth):
         if is_success:
             try:
                 tr = sox.Transformer()
-                tr.tremolo(speed,depth)
+                tr.tremolo(speed, depth)
                 tr.build_file(INPUT_DIRECTORY + filename + format,
                               OUTPUT_DIRECTORY + filename + format)
             except Exception as e:
@@ -244,6 +255,7 @@ def tremolo(speed,depth):
             return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
 
 @app.route("/volume/<string:new_volume>", methods=['POST'])
 def volume(new_volume):
@@ -262,7 +274,7 @@ def volume(new_volume):
         if is_success:
             try:
                 tr = sox.Transformer()
-                tr.vol(new_volume,'db')
+                tr.vol(new_volume, 'db')
                 tr.build_file(INPUT_DIRECTORY + filename + format,
                               OUTPUT_DIRECTORY + filename + format)
             except Exception as e:
@@ -273,6 +285,7 @@ def volume(new_volume):
             return app.make_response(bytes)
         return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
 
 def get_info(file):
     return {'channels': sox.file_info.channels(file),
@@ -307,6 +320,103 @@ def chorus(number_of_voices):
                 bytes = file.read()
             return app.make_response(bytes)
         return abort(500, 'File can\'t be saved')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
+
+@app.route("/echo", methods=['POST'])
+def echo():
+    try:
+        file = request.files['file']
+        format = get_format(file)
+
+        gain_in = request.form.get('gain_in')
+        gain_out = request.form.get('gain_out')
+        n_echos = request.form.get('n_echos')
+        delays = request.form.get('delays')
+        decays = request.form.get('decays')
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+
+    # validate input params
+    if 1 < gain_in <= 0:
+        return abort(400, 'gain_in must be a number between 0 and 1.')
+    if 1 < gain_out <= 0:
+        return abort(400, 'gain_out must be a number between 0 and 1. ')
+    if n_echos <= 0:
+        return abort(400, 'n_echos must be a positive integer.')
+
+    # validate delays
+    if not isinstance(delays, list):
+        return abort(400, "delays must be a list")
+    if len(delays) != n_echos:
+        return abort(400, "the length of delays must equal n_echos")
+    if any((not is_number(p) or p <= 0) for p in delays):
+        return abort(400, "the elements of delays must be numbers > 0")
+
+    # validate decays
+    if not isinstance(decays, list):
+        return abort(400, "decays must be a list")
+    if len(decays) != n_echos:
+        return abort(400, "the length of decays must equal n_echos")
+    if any((not is_number(p) or p <= 0 or p > 1) for p in decays):
+        return abort(400, "the elements of decays must be between 0 and 1")
+
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                tr.echo(gain_in, gain_out, n_echos, delays, decays)
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
+        return abort(500, 'File can\'t be saved')
+    return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
+
+
+@app.route("/bass", methods=['POST'])
+def bass():
+    try:
+        file = request.files['file']
+        format = get_format(file)
+
+        gain_db = request.form.get('gain_db')
+        frequency = request.form.get('frequency')
+        slope = request.form.get('slope')
+
+    except Exception as e:
+        print(e)
+        return abort(400, e)
+
+    # validate input params
+    if not is_number(gain_db):
+        return abort(400, "gain_db must be a number")
+    if not is_number(frequency) or frequency <= 0:
+        return abort(400, "frequency must be a positive number.")
+    if not is_number(slope) or slope <= 0 or slope > 1.0:
+        return abort(400, "width_q must be a positive number.")
+
+    if is_valid_format(format):
+        is_success, filename = save_file(file)
+        if is_success:
+            try:
+                tr = sox.Transformer()
+                tr.bass(gain_db, frequency, slope)
+                tr.build_file(INPUT_DIRECTORY + filename + format,
+                              OUTPUT_DIRECTORY + filename + format)
+            except Exception as e:
+                print(e)
+                return abort(500, e)
+            with open(OUTPUT_DIRECTORY + filename + format, 'rb') as file:
+                bytes = file.read()
+            return app.make_response(bytes)
+        return abort(500, 'File can\'t be save')
     return abort(400, 'Check formats, available formats: ' + str(VALID_FORMATS))
 
 
