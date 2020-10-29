@@ -1,5 +1,3 @@
-# ----------------Values constants----------------
-
 DATABASE = 'sqlite3.db'
 VALID_FORMATS = ['.aif', '.aifc', '.aiff', '.au', '.avr', '.flac', '.ogg', '.snd', '.wav']
 INPUT_DIRECTORY = 'input files/'
