@@ -1,5 +1,8 @@
+import datetime
+import sqlite3
+
 import werkzeug, time, random, sox, re, os
-from flask import Flask, abort, g
+from flask import Flask, abort, g, render_template
 from flask import request
 from sox.core import is_number
 from const import *
@@ -37,6 +40,16 @@ def save_file(file):
     return True, filename
 
 
+def save_log(request_name,status,status_code,description,params):
+    try:
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO logs VALUES (NULL ,?,?,?,?,?,?)",
+                (datetime.datetime.now(),request_name,status,status_code,description,params))
+            conn.commit()
+    except sqlite3.Error as e:
+        print(e)
+
 def main(func, *args):
     if g.access:
         try:
@@ -51,18 +64,37 @@ def main(func, *args):
                                      OUTPUT_DIRECTORY + filename + format)
             return app.make_response(read_file(OUTPUT_DIRECTORY + filename + format))
         except werkzeug.exceptions.BadRequest as e:
+            g.error = True
+            save_log(g.request_name,'ERROR',400, str(e), g.params)
             return abort(400, e)
         except sox.core.SoxiError or sox.core.SoxError as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(500, e)
         except Exception as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 500, str(e), g.params)
             return abort(500, e)
+    g.error = True
     res = app.make_response('Storage is overflow, try again after a few seconds')
     res.status_code = 507
+    save_log(g.request_name, 'ERROR', 507,
+             'Storage is overflow, try again after a few seconds', g.params)
     return res
 
+@app.errorhandler(404)
+def page_not_found(e):
+    g.error = True
+    save_log(g.request_name, 'ERROR', 404, '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.', g.params)
+    res = app.make_response('404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.')
+    res.status_code = 404
+    return res
 
 @app.before_request
 def before_request():
+    g.request_name = request.path
+    g.params = '()'
+    g.error = False
     g.path_to_files = []
     g.transformer = sox.Transformer()
     g.combiner = sox.Combiner()
@@ -72,18 +104,22 @@ def before_request():
 
 
 @app.teardown_request
-def clear(error=None):
+def finish_request(error=None):
     for path_to_file in g.path_to_files:
         if os.path.exists(path_to_file):
             os.remove(path_to_file)
+    if not g.error:
+        save_log(g.request_name, 'OK', 200, 'success', g.params)
 
 
 def core_trim(start_time, end_time):
     g.transformer.trim(start_time, end_time)
 
 
-@app.route("/test_trim/start_time=<int:start_time>&end_time=<int:end_time>", methods=['POST'])
+@app.route("/trim/start_time=<int:start_time>&end_time=<int:end_time>", methods=['POST'])
 def trim(start_time, end_time):
+    g.request_name = request.path
+    g.params = str((start_time,end_time))
     return main(core_trim, start_time, end_time)
 
 
@@ -93,6 +129,7 @@ def core_treble(gain):
 
 @app.route("/treble/gain=<int:gain>", methods=['POST'])
 def treble(gain):
+    g.params = '('+str(gain)+')'
     return main(core_treble, gain)
 
 
@@ -121,10 +158,16 @@ def concatenate():
             g.combiner.build(path_to_files, OUTPUT_DIRECTORY + output_filename + '.ogg', 'concatenate')
             return app.make_response(read_file(OUTPUT_DIRECTORY + output_filename + '.ogg'))
         except werkzeug.exceptions.BadRequest as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(400, e)
         except sox.core.SoxiError or sox.core.SoxError as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(500, e)
         except Exception as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 500, str(e), g.params)
             return abort(500, e)
     res = app.make_response('Storage is overflow, try again after a few seconds')
     res.status_code = 507
@@ -147,10 +190,16 @@ def mix():
             g.combiner.build(path_to_files, OUTPUT_DIRECTORY + output_filename + '.ogg', 'mix')
             return app.make_response(read_file(OUTPUT_DIRECTORY + output_filename + '.ogg'))
         except werkzeug.exceptions.BadRequest as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(400, e)
         except sox.core.SoxiError or sox.core.SoxError as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(500, e)
         except Exception as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 500, str(e), g.params)
             return abort(500, e)
     res = app.make_response('Storage is overflow, try again after a few seconds')
     res.status_code = 507
@@ -163,6 +212,7 @@ def core_fade(fade_start, fade_end):
 
 @app.route("/fade/fade_start=<float:fade_start>&fade_end=<float:fade_end>", methods=['POST'])
 def fade(fade_start, fade_end):
+    g.params = str((fade_start, fade_end))
     return main(core_fade, fade_start, fade_end)
 
 
@@ -179,6 +229,7 @@ def core_flanger(preset):
 
 @app.route("/flanger/effect=<string:effect>", methods=['POST'])
 def flanger(effect):
+    g.params = '('+effect+')'
     return main(core_flanger, effect)
 
 
@@ -189,6 +240,7 @@ def core_tremolo(speed, depth):
 @app.route("/tremolo", methods=['POST'], defaults={'speed': 6, 'depth': 50})
 @app.route("/tremolo/speed=<int:speed>&depth=<int:depth>", methods=['POST'])
 def tremolo(speed, depth):
+    g.params = str((speed, depth))
     return main(core_tremolo, speed, depth)
 
 
@@ -201,6 +253,7 @@ def core_volume(new_volume):
 
 @app.route("/volume/new_volume=<string:new_volume>", methods=['POST'])
 def volume(new_volume):
+    g.params = '('+new_volume+')'
     return main(core_volume, int(new_volume))
 
 
@@ -218,10 +271,16 @@ def get_info():
                     'duration': sox.file_info.duration(filename),
                     'size': os.stat(filename).st_size}
         except werkzeug.exceptions.BadRequest as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(400, e)
         except sox.core.SoxiError or sox.core.SoxError as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(500, e)
         except Exception as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 500, str(e), g.params)
             return abort(500, e)
     res = app.make_response('Storage is overflow, try again after a few seconds')
     res.status_code = 507
@@ -236,9 +295,10 @@ def core_chorus(number_of_voices):
 
 @app.route("/chorus/number_of_voices=<int:number_of_voices>", methods=['POST'])
 def chorus(number_of_voices):
+    g.params = '('+str(number_of_voices)+')'
     return main(core_chorus, number_of_voices)
 
-
+#!!!
 @app.route("/echo", methods=['POST'])
 def echo():
     if g.access:
@@ -298,7 +358,7 @@ def echo():
     res.status_code = 507
     return res
 
-
+#!!!
 @app.route("/bass", methods=['POST'])
 def bass():
     if g.access:
@@ -351,6 +411,7 @@ def core_speed(new_speed):
 
 @app.route("/speed/new_speed=<float:new_speed>", methods=['POST'])
 def speed(new_speed):
+    g.params = '('+str(new_speed)+')'
     return main(core_speed, new_speed)
 
 
@@ -362,11 +423,13 @@ def core_repeat(n):
 
 @app.route("/repeat/n=<int:n>", methods=['POST'])
 def repeat(n):
+    g.params = '('+str(n)+')'
     return main(core_repeat, n)
 
 
 @app.route("/convert/new_format=<string:new_format>", methods=['POST'])
 def convert(new_format):
+    g.params = '('+new_format+')'
     if g.access:
         try:
             file = request.files['file']
@@ -377,10 +440,16 @@ def convert(new_format):
                                          OUTPUT_DIRECTORY + filename + new_format)
             return app.make_response(read_file(OUTPUT_DIRECTORY + filename + format))
         except werkzeug.exceptions.BadRequest as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(400, e)
         except sox.core.SoxiError or sox.core.SoxError as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 400, str(e), g.params)
             return abort(500, e)
         except Exception as e:
+            g.error = True
+            save_log(g.request_name, 'ERROR', 500, str(e), g.params)
             return abort(500, e)
     res = app.make_response('Storage is overflow, try again after a few seconds')
     res.status_code = 507
