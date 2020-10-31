@@ -94,7 +94,6 @@ def page_not_found(e: NotFound) -> Response:
 @app.errorhandler(405)
 def method_not_allowed(e: MethodNotAllowed) -> Response:
     g.error = True
-    print(e.__class__)
     save_log(g.request_name, 'ERROR', 405, 'The method is not allowed for the requested URL.', g.params)
     res = app.make_response('The method is not allowed for the requested URL.')
     res.status_code = 405
@@ -383,7 +382,7 @@ def convert(new_format: str) -> Response:
             g.path_to_files.append(OUTPUT_DIRECTORY + filename + new_format)
             sox.Transformer().build_file(INPUT_DIRECTORY + filename + format,
                                          OUTPUT_DIRECTORY + filename + new_format)
-            return app.make_response(read_file(OUTPUT_DIRECTORY + filename + format))
+            return app.make_response(read_file(OUTPUT_DIRECTORY + filename + new_format))
         except werkzeug.exceptions.BadRequest as e:
             g.error = True
             save_log(g.request_name, 'ERROR', 400, str(e), g.params)
