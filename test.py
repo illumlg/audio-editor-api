@@ -2,8 +2,9 @@ import os
 import unittest
 
 import sox
+from werkzeug.datastructures import FileStorage
 
-from app import app
+from app import app, generate_filename, get_format, read_file, save_file, save_log, main, core_reverse
 
 
 class AppTests(unittest.TestCase):
@@ -18,6 +19,48 @@ class AppTests(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_get_format(self):
+        fl = FileStorage(filename='filename.wav')
+        self.assertEqual(get_format(fl),'.wav')
+        fl.filename = 'sound.mp3-.wav.ogg'
+        self.assertEqual(get_format(fl),'.ogg')
+        fl.filename = 'name.AVR'
+        self.assertEqual(get_format(fl),'.avr')
+        fl.filename = ''
+        self.assertIsNone(get_format(fl))
+        fl.filename = None
+        self.assertIsNone(get_format(fl))
+        fl.filename = {}
+        self.assertIsNone(get_format(fl))
+
+    def test_generate_filename(self):
+        n = 100
+        lst_names = [generate_filename() for i in range(n)]
+        self.assertEqual(len(lst_names),len(set(lst_names)))
+
+    def test_read_file(self):
+        valid_path = self.input_file_path
+        invalid_path = 'input files//160400487955978.wav'
+        not_exist_path = 'input files2/160400487955978'
+        not_path = [1,2,3]
+        with open(valid_path, 'rb') as file:
+            bytes = file.read()
+        self.assertEqual(read_file(valid_path),bytes)
+        self.assertEqual(read_file(invalid_path),b'')
+        self.assertIsNone(read_file(not_exist_path),None)
+        self.assertIsNone(read_file(not_path),None)
+
+    def test_save_file(self):
+        fl = FileStorage(filename=self.input_file_path)
+        with open(self.input_file_path, 'rb') as file:
+            fl.stream = file.read()
+        self.assertIsNotNone(save_file(fl))
+
+    def test_save_log(self):
+        self.assertIsNone(save_log('/speed/new_speed=7.0','OK',200,'success','(7)'))
+        self.assertIsNone(save_log('/speed/new_speed=7.0','OK','200','success','(7)'))
+        self.assertIsNone(save_log('/speed/new_speed=7.0','OK',200,'success',None))
 
     def test_page_not_fount(self):
         input_file = open(self.input_file_path, 'rb')
@@ -260,7 +303,6 @@ class AppTests(unittest.TestCase):
                                     self.output_file_path)
         with open(self.output_file_path, 'rb') as file:
             expected_file = file.read()
-        file.close()
 
         return expected_file
 

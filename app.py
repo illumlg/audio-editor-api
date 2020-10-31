@@ -10,17 +10,22 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_SIZE
 
 
-def get_format(file: FileStorage) -> str:
-    return '.' + re.split('\.', file.filename)[-1].lower()
+def get_format(file: FileStorage) -> str or None:
+    if isinstance(file,FileStorage) and file.filename != '' and \
+            isinstance(file.filename,str):
+        return '.' + re.split('\.', file.filename)[-1].lower()
+    return None
 
 
 def generate_filename() -> str:
     return str(round(time.time() * 1000)) + str(random.randint(1, 10000))
 
 
-def read_file(path: str) -> bytes:
-    with open(path, 'rb') as file:
-        return file.read()
+def read_file(path: str) -> bytes or None:
+    if isinstance(path,str) and os.path.exists(path):
+        with open(path, 'rb') as file:
+            return file.read()
+    return None
 
 
 def save_file(file: FileStorage) -> (bool, str):
@@ -327,8 +332,8 @@ def echo() -> Response:
     gain_in = request.form.get('gain_in')
     gain_out = request.form.get('gain_out')
     n_echos = request.form.get('n_echos')
-    g.params = str(gain_in, gain_out, n_echos)
-    return main(core_echo, gain_in, gain_out, n_echos)
+    g.params = str((gain_in, gain_out, n_echos))
+    return main(core_echo, float(gain_in), float(gain_out), int(n_echos))
 
 
 def core_bass(gain_db: float, frequency: float, slope: float) -> None:
@@ -340,9 +345,8 @@ def bass() -> Response:
     gain_db = request.form.get('gain_db')
     frequency = request.form.get('frequency')
     slope = request.form.get('slope')
-    ##todo fixme
-    g.params = str(gain_db, frequency, slope)
-    return main(core_bass, gain_db, frequency, slope)
+    g.params = str((gain_db, frequency, slope))
+    return main(core_bass, float(gain_db), float(frequency), float(slope))
 
 
 def core_speed(new_speed: float) -> None or Response:
