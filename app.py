@@ -318,8 +318,8 @@ def chorus(number_of_voices: int) -> Response:
     return main(core_chorus, number_of_voices)
 
 
-def core_echo(gain_in: float, gain_out: float, n_echos: int, delays: list, decays: list) -> None:
-    g.transformer.echo(gain_in, gain_out, n_echos, delays, decays)
+def core_echo(gain_in: float, gain_out: float, n_echos: int) -> None:
+    g.transformer.echo(gain_in, gain_out, n_echos)
 
 
 @app.route("/echo", methods=['POST'])
@@ -327,10 +327,8 @@ def echo() -> Response:
     gain_in = request.form.get('gain_in')
     gain_out = request.form.get('gain_out')
     n_echos = request.form.get('n_echos')
-    delays = request.form.get('delays')
-    decays = request.form.get('decays')
-    g.params = str((gain_in, gain_out, n_echos, delays, decays))
-    return main(core_echo, gain_in, gain_out, n_echos, delays, decays)
+    g.params = str(gain_in, gain_out, n_echos)
+    return main(core_echo, gain_in, gain_out, n_echos)
 
 
 def core_bass(gain_db: float, frequency: float, slope: float) -> None:
@@ -342,6 +340,7 @@ def bass() -> Response:
     gain_db = request.form.get('gain_db')
     frequency = request.form.get('frequency')
     slope = request.form.get('slope')
+    ##todo fixme
     g.params = str(gain_db, frequency, slope)
     return main(core_bass, gain_db, frequency, slope)
 
