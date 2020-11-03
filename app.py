@@ -18,7 +18,7 @@ def get_format(file: FileStorage) -> str or None:
 
 
 def generate_filename() -> str:
-    return str(round(time.time() * 1000)) + str(random.randint(1, 10000))
+    return str(round(time.time() * 10000000)) + str(random.randint(1, 10000000))
 
 
 def read_file(path: str) -> bytes or None:
@@ -113,19 +113,28 @@ def before_request() -> None:
     g.path_to_files = []
     g.transformer = sox.Transformer()
     g.combiner = sox.Combiner()
-    total_size = sum([os.path.getsize(INPUT_DIRECTORY + file) for file in os.listdir(INPUT_DIRECTORY)]) + \
-                 sum([os.path.getsize(OUTPUT_DIRECTORY + file) for file in os.listdir(OUTPUT_DIRECTORY)])
+    total_size = 0
+    try:
+        total_size = sum([os.path.getsize(INPUT_DIRECTORY + file) if os.path.exists(INPUT_DIRECTORY + file) else 0 for file in os.listdir(INPUT_DIRECTORY)]) + \
+                    sum([os.path.getsize(OUTPUT_DIRECTORY + file) if os.path.exists(OUTPUT_DIRECTORY + file) else 0 for file in os.listdir(OUTPUT_DIRECTORY)])
+    except Exception as e:print(e)
     g.access = total_size < STORAGE_LIMIT
 
 
 @app.teardown_request
 def finish_request(error=None) -> None:
     for path_to_file in g.path_to_files:
-        if os.path.exists(path_to_file):
-            os.remove(path_to_file)
+        try:
+            if os.path.exists(path_to_file):
+                os.remove(path_to_file)
+        except Exception as e:
+            print(e)
     if not g.error:
         save_log(g.request_name, 'OK', 200, 'success', g.params)
 
+@app.route("/",methods=['GET'])
+def index():
+    return 'Test locust'
 
 def core_trim(start_time: int, end_time: int) -> None:
     g.transformer.trim(start_time, end_time)
