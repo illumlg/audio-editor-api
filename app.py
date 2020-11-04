@@ -63,7 +63,9 @@ def main(func: Callable[..., None], *args: Any) -> Response:
                 func(*args)
             g.transformer.build_file(INPUT_DIRECTORY + filename + format,
                                      OUTPUT_DIRECTORY + filename + format)
-            return app.make_response(read_file(OUTPUT_DIRECTORY + filename + format))
+            res = app.make_response(read_file(OUTPUT_DIRECTORY + filename + format))
+            res.headers['Content-Type'] = 'audio/*'
+            return res
         except werkzeug.exceptions.BadRequest as e:
             g.error = True
             save_log(g.request_name, 'ERROR', 400, str(e), g.params)
