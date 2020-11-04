@@ -65,6 +65,7 @@ def main(func: Callable[..., None], *args: Any) -> Response:
                                      OUTPUT_DIRECTORY + filename + format)
             res = app.make_response(read_file(OUTPUT_DIRECTORY + filename + format))
             res.mimetype = 'audio/*'
+            res.headers['Content-Type'] = 'audio/*
             return res
         except werkzeug.exceptions.BadRequest as e:
             g.error = True
