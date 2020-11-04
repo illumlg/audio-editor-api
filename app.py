@@ -413,7 +413,3 @@ def convert(new_format: str) -> Response:
     save_log(g.request_name, 'ERROR', 507,
              'Storage is overflow, try again after a few seconds', g.params)
     return res
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
