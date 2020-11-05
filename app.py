@@ -1,6 +1,6 @@
 from typing import Any, Callable
 import werkzeug, time, random, sox, re, os, sqlite3, datetime
-from flask import Flask, abort, g, Response
+from flask import Flask, abort, g, Response, render_template, send_file
 from flask import request
 from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import NotFound, MethodNotAllowed
@@ -133,8 +133,8 @@ def finish_request(error=None) -> None:
         save_log(g.request_name, 'OK', 200, 'success', g.params)
 
 @app.route("/",methods=['GET'])
-def index():
-    return 'Test locust'
+def get_help():
+    return send_file('help.html')
 
 def core_trim(start_time: int, end_time: int) -> None:
     g.transformer.trim(start_time, end_time)

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Help</title>
+</head>
+<body>
+
+<h1>It's a short introduction in the API</h1>
+<h2>Available URLs:</h2>
+
+<h4><p>1. https://audio-editor-api.herokuapp.com</h4>
+<p>Methods: GET
+<p>Description: base url, return information about this API.
+<hr>
+<h4><p>2. https://audio-editor-api.herokuapp.com/trim/start_time=start_time&end_time=end_time</p></h4>
+<p>Parameters:
+<ul>
+    <li>start_time(int): Start time of the clip (seconds).</li>
+    <li>end_time(int): End time of the clip (seconds).</li>
+</ul>
+<p>Methods: POST
+<p>Description: Excerpt a clip from an audio file, given the start timestamp and end timestamp of the clip within the
+    file, expressed in seconds.
+<hr>
+
+
+<h4><p>3. https://audio-editor-api.herokuapp.com/treble/gain=gain</p></h4>
+<p>Parameters:
+<ul>
+    <li>gain(int): The gain at the Nyquist frequency. For a large cut use -20, for a large boost use 20.</li>
+</ul>
+<p>Methods: POST
+<p>Description: Boost or cut the treble (lower) frequencies of the audio using a two-pole shelving filter with a
+    response similar to that of a standard hi-fi’s tone-controls. This is also known as shelving equalisation.
+<hr>
+
+
+<h4><p>4. https://audio-editor-api.herokuapp.com/reverse</p></h4>
+<p>Methods: POST
+<p>Description: Reverse the audio completely.
+<hr>
+
+<h4><p>5. https://audio-editor-api.herokuapp.com/concatenate</p></h4>
+<p>Methods: POST
+<p>Description: Concatenate several files into one.
+<hr>
+
+<h4><p>6. https://audio-editor-api.herokuapp.com/mix</p></h4>
+<p>Methods: POST
+<p>Description: Mix several files into one.
+<hr>
+
+<h4><p>7. https://audio-editor-api.herokuapp.com/fade/fade_start=fade_start&fade_end=fade_end</p></h4>
+<p>Parameters:
+<ul>
+    <li>fade_start(float): Length of fade-in (seconds). If fade_start = 0.0, no fade in is applied.</li>
+    <li>fade_end(float): Length of fade-out (seconds). If fade_end = 0.0, no fade in is applied.</li>
+</ul>
+<p>Methods: POST
+<p>Description: Add a fade in and/or fade out to an audio file.
+<hr>
+
+<h4><p>8. https://audio-editor-api.herokuapp.com/flanger/effect=effect</p></h4>
+<p>Parameters:
+<ul>
+    <li>effect(string): one of theme - low, medium, high.</li>
+</ul>
+<p>Methods: POST
+<p>Description: Apply a flanging effect to the audio.
+<hr>
+
+<h4><p>9.1 https://audio-editor-api.herokuapp.com/tremolo</p></h4>
+<h4><p>9.2 https://audio-editor-api.herokuapp.com/tremolo/speed=speed&depth=depth</p></h4>
+<p>Parameters:
+<ul>
+    <li>speed(int, default=6): Sweeps per second (in Hz) between 1 and 10.</li>
+    <li>depth(int, default=50): Added swept delay (in milliseconds) between 0 and 10.</li>
+</ul>
+<p>Methods: POST
+<p>Description: Apply a flanging effect to the audio.
+<hr>
+
+<h4><p>10. https://audio-editor-api.herokuapp.com/volume/new_volume=new_volume</p></h4>
+<p>Parameters:
+<ul>
+    <li>new_volume(string): value in decibels, max=15, min=-50.</li>
+</ul>
+<p>Methods: POST
+<p>Description: Apply an amplification or an attenuation to the audio signal.
+<hr>
+
+<h4><p>11. https://audio-editor-api.herokuapp.com/info</p></h4>
+<p>Methods: POST
+<p>Description: Get information about file (channels, sample rate, encoding, duration, size).
+<hr>
+
+<h4><p>12. https://audio-editor-api.herokuapp.com/chorus/number_of_voices=number_of_voices</p></h4>
+<p>Parameters:
+<ul>
+    <li>number_of_voices(int): The number of voices in the chorus effect, max=5.</li>
+</ul>
+<p>Methods: POST
+<p>Description: Add a chorus effect to the audio. This can make a single vocal sound like a chorus, but can also be
+    applied to instrumentation.
+<hr>
+
+<h4><p>13. https://audio-editor-api.herokuapp.com/echo</p></h4>
+<p>Parameters (send as data):
+<ul>
+    <li>gain_in(float): Input volume, between 0 and 1.</li>
+    <li>gain_out(float): Output volume, between 0 and 1.</li>
+    <li>n_echos(int): Number of reflections.</li>
+</ul>
+<p>Methods: POST
+<p>Description: Add echoing to the audio.
+<hr>
+
+<h4><p>14. https://audio-editor-api.herokuapp.com/bass</p></h4>
+<p>Parameters (send as data):
+<ul>
+    <li>gain_db(float): The gain at 0 Hz. For a large cut use -20, for a large boost use 20.</li>
+    <li>frequency(float): The filter’s cutoff frequency in Hz.</li>
+    <li>slope(float): The steepness of the filter’s shelf transition. For a gentle slope use 0.3, and use 1.0 for a
+        steep slope.
+    </li>
+</ul>
+<p>Methods: POST
+<p>Description: Boost or cut the bass (lower) frequencies of the audio using a two-pole shelving filter with a response
+    similar to that of a standard hi-fi’s tone-controls.
+<hr>
+
+<h4><p>15. https://audio-editor-api.herokuapp.com/speed/new_speed=new_speed</p></h4>
+<p>Parameters:
+<ul>
+    <li>new_speed(float): The ratio of the new speed to the old speed. For ex. 1.1 speeds up the audio by 10%; 0.9 slows
+        it down by 10%.
+    </li>
+</ul>
+<p>Methods: POST
+<p>Description: Adjust the audio speed.
+<hr>
+
+<h4><p>16. https://audio-editor-api.herokuapp.com/repeat/n=n</p></h4>
+<p>Parameters:
+<ul>
+    <li>n(int): The number of times to repeat the audio.</li>
+</ul>
+<p>Methods: POST
+<p>Description: Repeat the entire audio count times.
+<hr>
+
+<h4><p>17. https://audio-editor-api.herokuapp.com/convert/new_format=new_format</p></h4>
+<p>Parameters:
+<ul>
+    <li>new_format(string): Available formats - ['.aif', '.aifc', '.aiff', '.au', '.avr', '.flac', '.ogg', '.snd',
+        '.wav'].
+    </li>
+</ul>
+<p>Methods: POST
+<p>Description: Convert file into selected format.
+<hr>
+<p>
+<h3>P.S: Send file in request with key 'file', max size files = 20Mb</h3>
+</body>
+</html>
