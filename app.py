@@ -213,9 +213,9 @@ def mix() -> Response:
                 if not is_success:
                     return abort(500, 'File can\'t be saved')
             output_filename = generate_filename()
-            g.path_to_files.append(OUTPUT_DIRECTORY + output_filename + '.ogg')
-            g.combiner.build(path_to_files, OUTPUT_DIRECTORY + output_filename + '.ogg', 'mix')
-            return app.make_response(read_file(OUTPUT_DIRECTORY + output_filename + '.ogg'))
+            g.path_to_files.append(OUTPUT_DIRECTORY + output_filename + '.wav')
+            g.combiner.build(path_to_files, OUTPUT_DIRECTORY + output_filename + '.wav', 'mix')
+            return app.make_response(read_file(OUTPUT_DIRECTORY + output_filename + '.wav'))
         except werkzeug.exceptions.BadRequest as e:
             g.error = True
             save_log(g.request_name, 'ERROR', 400, str(e), g.params)
