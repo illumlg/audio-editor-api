@@ -47,7 +47,7 @@ class AppTests(unittest.TestCase):
         with open(valid_path, 'rb') as file:
             bytes = file.read()
         self.assertEqual(read_file(valid_path),bytes)
-        self.assertEqual(read_file(invalid_path),b'')
+        self.assertEqual(read_file(invalid_path),None)
         self.assertIsNone(read_file(not_exist_path),None)
         self.assertIsNone(read_file(not_path),None)
 

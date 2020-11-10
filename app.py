@@ -1,6 +1,6 @@
 from typing import Any, Callable
 import werkzeug, time, random, sox, re, os, sqlite3, datetime
-from flask import Flask, abort, g, Response, render_template, send_file
+from flask import Flask, abort, g, Response, send_file
 from flask import request
 from werkzeug.datastructures import FileStorage
 from werkzeug.exceptions import NotFound, MethodNotAllowed
